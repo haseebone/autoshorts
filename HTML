@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoShorts — Viral Video Machine</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#08080c;--bg2:#101018;--card:#14141e;--border:#1e1e30;--fg:#e8e8ec;--muted:#6b6b80;--accent:#ff3b30;--accent2:#ff5545;--glow:rgba(255,59,48,.25);--success:#30d158;--warn:#ff9f0a}
+*{margin:0;padding:0;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--fg);overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:10px;cursor:pointer;transition:.2s;color:var(--muted);font-weight:500;font-size:14px}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--fg)}
+.nav-item.active{background:var(--glow);color:var(--accent);font-weight:600}
+.btn-primary{background:var(--accent);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;transition:.2s;display:inline-flex;align-items:center;gap:8px}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 8px 24px var(--glow)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:10px 20px;border-radius:10px;font-family:inherit;font-weight:500;font-size:13px;cursor:pointer;transition:.2s}
+.btn-ghost:hover{border-color:var(--muted);color:var(--fg)}
+.topic-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;cursor:pointer;transition:.25s;position:relative;overflow:hidden}
+.topic-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,.4)}
+.topic-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);opacity:0;transition:.25s}
+.topic-card:hover::before{opacity:1}
+.style-card{background:var(--card);border:2px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:.2s;text-align:center}
+.style-card:hover{border-color:var(--muted)}
+.style-card.active{border-color:var(--accent);box-shadow:0 0 20px var(--glow)}
+.progress-bar{width:100%;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--warn));border-radius:3px;transition:width .15s}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;font-size:14px;z-index:999;animation:slideIn .3s ease;display:flex;align-items:center;gap:10px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;gap:16px;align-items:flex-start}
+.step-num{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.scene-item{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:10px;align-items:flex-start}
+.scene-num{color:var(--accent);font-weight:700;font-size:12px;min-width:20px}
+.glow-dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
+.history-row{display:grid;grid-template-columns:40px 1fr 120px 100px;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);font-size:14px}
+.sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg2);display:flex;flex-direction:column;padding:16px;gap:8px}
+.sidebar-label{display:inline}
+@media(max-width:768px){
+  .sidebar{width:64px;padding:12px 8px}
+  .sidebar-label{display:none}
+  .sidebar .text-xs{display:none}
+  .editor-grid{grid-template-columns:1fr!important}
+  .history-row{grid-template-columns:30px 1fr 80px!important}
+  .history-row>:nth-child(4){display:none}
+  .topics-grid-custom{grid-template-columns:1fr!important}
+}
+</style>
+</head>
+<body>
+<div id="app" class="flex h-screen">
+<aside class="sidebar">
+  <div class="flex items-center gap-3 px-2 mb-6 mt-2">
+    <div class="w-9 h-9 rounded-lg bg-[var(--accent)] flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-bolt text-white text-sm"></i></div>
+    <div class="sidebar-label"><div class="font-bold text-[15px]">AutoShorts</div><div class="text-[11px] text-[var(--muted)]">Viral Machine</div></div>
+  </div>
+  <div class="nav-item active" data-view="dashboard"><i class="fa-solid fa-fire w-5 text-center"></i><span class="sidebar-label">Dashboard</span></div>
+  <div class="nav-item" data-view="editor"><i class="fa-solid fa-wand-magic-sparkles w-5 text-center"></i><span class="sidebar-label">Editor</span></div>
+  <div class="nav-item" data-view="history"><i class="fa-solid fa-clock-rotate-left w-5 text-center"></i><span class="sidebar-label">History</span></div>
+  <div class="flex-1"></div>
+  <div class="nav-item" data-view="setup"><i class="fa-solid fa-gear w-5 text-center"></i><span class="sidebar-label">YouTube Setup</span></div>
+  <div id="conn-status" class="flex items-center gap-2 px-2 py-2 text-[12px] text-[var(--muted)]"><div class="w-2 h-2 rounded-full bg-[var(--muted)] flex-shrink-0"></div><span class="sidebar-label">Not connected</span></div>
+</aside>
+<main class="flex-1 overflow-y-auto">
+
+  <div id="view-setup" class="hidden p-6 md:p-8 max-w-3xl mx-auto">
+    <h1 class="text-3xl font-800 mb-2">YouTube Setup</h1>
+    <p class="text-[var(--muted)] mb-8 text-[15px]">One-time setup to connect your YouTube channel. Completely free.</p>
+    <div class="bg-[var(--warn)] bg-opacity-10 border border-[var(--warn)] border-opacity-30 rounded-xl p-4 mb-8 text-sm flex gap-3 items-start">
+      <i class="fa-solid fa-triangle-exclamation text-[var(--warn)] mt-0.5 flex-shrink-0"></i>
+      <div><strong>If hosted on GitHub Pages:</strong> Just open the URL and it works. If running locally, serve via <code class="bg-black/30 px-2 py-0.5 rounded text-xs">python -m http.server 8080</code></div>
+    </div>
+    <div class="flex flex-col gap-4 mb-8">
+      <div class="step-card"><div class="step-num">1</div><div>Go to <a href="https://console.cloud.google.com" target="_blank" class="text-[var(--accent)] underline">console.cloud.google.com</a> and create a new project (free).</div></div>
+      <div class="step-card"><div class="step-num">2</div><div>Search for <strong>"YouTube Data API v3"</strong> in the API Library and click <strong>Enable</strong>.</div></div>
+      <div class="step-card"><div class="step-num">3</div><div>Go to <strong>Credentials → Create Credentials → OAuth client ID</strong>. Select "Web application".</div></div>
+      <div class="step-card"><div class="step-num">4</div><div>Under <strong>Authorized JavaScript origins</strong>, add: <code id="origin-hint" class="bg-black/40 px-2 py-0.5 rounded text-xs select-all"></code></div></div>
+      <div class="step-card"><div class="step-num">5</div><div>Copy your <strong>Client ID</strong> and paste it below.</div></div>
+    </div>
+    <div class="flex gap-3 items-end flex-wrap">
+      <div class="flex-1 min-w-[250px]"><label class="text-sm text-[var(--muted)] mb-2 block">Google OAuth Client ID</label>
+      <input id="client-id-input" type="text" placeholder="xxxxxxx.apps.googleusercontent.com" class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm outline-none focus:border-[var(--accent)] transition font-mono"></div>
+      <button id="btn-save-client" class="btn-primary h-[46px]">Save</button>
+    </div>
+    <div id="connect-section" class="hidden mt-8 pt-8 border-t border-[var(--border)]">
+      <p class="mb-4 text-sm text-[var(--muted)]">Client ID saved. Now connect your YouTube channel:</p>
+      <button id="btn-connect-yt" class="btn-primary"><i class="fa-brands fa-youtube"></i>Connect YouTube</button>
+    </div>
+  </div>
+
+  <div id="view-dashboard" class="p-6 md:p-8">
+    <div class="flex items-end justify-between mb-8 flex-wrap gap-4">
+      <div><h1 class="text-3xl font-800 mb-1">Today's Viral Topics</h1><p class="text-[var(--muted)] text-[15px]" id="today-date"></p></div>
+      <button class="btn-ghost" onclick="generateDailyTopics()"><i class="fa-solid fa-rotate-right mr-2"></i>Refresh</button>
+    </div>
+    <div id="topics-grid" class="topics-grid-custom grid grid-cols-1 md:grid-cols-3 gap-5 mb-10"></div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5"><div class="text-[var(--muted)] text-xs mb-1 uppercase tracking-wider">Videos Made</div><div class="text-2xl font-800" id="stat-videos">0</div></div>
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5"><div class="text-[var(--muted)] text-xs mb-1 uppercase tracking-wider">Day Streak</div><div class="text-2xl font-800" id="stat-streak">0</div></div>
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5"><div class="text-[var(--muted)] text-xs mb-1 uppercase tracking-wider">Status</div><div class="text-2xl font-800 flex items-center gap-2" id="stat-status"><div class="glow-dot"></div>Ready</div></div>
+    </div>
+    <div class="mt-8 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <h3 class="font-600 mb-3 text-sm">Quick Tip</h3>
+      <p class="text-[var(--muted)] text-sm leading-relaxed">After uploading, go to YouTube Studio and add a trending audio track from the Audio Library. Videos with trending sounds get significantly more impressions on Shorts. Add hashtags like #shorts #viral #facts in the description.</p>
+    </div>
+  </div>
+
+  <div id="view-editor" class="hidden p-6 md:p-8">
+    <div class="flex items-end justify-between mb-6 flex-wrap gap-4">
+      <div><h1 class="text-2xl font-800 mb-1">Video Editor</h1><p class="text-[var(--muted)] text-sm" id="editor-topic-label">Select a topic from Dashboard</p></div>
+      <button class="btn-ghost" onclick="showView('dashboard')"><i class="fa-solid fa-arrow-left mr-2"></i>Back</button>
+    </div>
+    <div class="editor-grid grid gap-8" style="grid-template-columns:auto 1fr">
+      <div class="flex flex-col items-center gap-4">
+        <canvas id="render-canvas" width="1080" height="1920" style="width:243px;height:432px;background:#000;border-radius:12px"></canvas>
+        <div id="render-progress-wrap" class="hidden w-full max-w-[243px]">
+          <div class="flex justify-between text-xs text-[var(--muted)] mb-1"><span id="render-status">Rendering...</span><span id="render-pct">0%</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="render-fill" style="width:0%"></div></div>
+        </div>
+        <div id="render-actions" class="flex gap-3 w-full max-w-[243px]">
+          <button id="btn-render" class="btn-primary flex-1 text-sm justify-center" disabled onclick="startRender()"><i class="fa-solid fa-film"></i>Render</button>
+          <button id="btn-download" class="btn-ghost text-sm hidden" onclick="downloadVideo()"><i class="fa-solid fa-download"></i></button>
+          <button id="btn-upload" class="btn-primary flex-1 text-sm justify-center hidden" onclick="uploadToYouTube()"><i class="fa-brands fa-youtube"></i>Upload</button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-6 min-w-0">
+        <div>
+          <h3 class="font-600 text-sm mb-3 uppercase tracking-wider text-[var(--muted)]">Script</h3>
+          <div id="script-list" class="flex flex-col gap-2 max-h-[280px] overflow-y-auto pr-2"></div>
+        </div>
+        <div>
+          <h3 class="font-600 text-sm mb-3 uppercase tracking-wider text-[var(--muted)]">Visual Style</h3>
+          <div id="styles-grid" class="grid grid-cols-5 gap-3"></div>
+        </div>
+        <div>
+          <h3 class="font-600 text-sm mb-3 uppercase tracking-wider text-[var(--muted)]">Upload Details</h3>
+          <input id="video-title" type="text" placeholder="Video title..." class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm outline-none focus:border-[var(--accent)] transition mb-3">
+          <textarea id="video-desc" placeholder="Description with #shorts #viral..." rows="2" class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm outline-none focus:border-[var(--accent)] transition resize-none"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-history" class="hidden p-6 md:p-8">
+    <h1 class="text-3xl font-800 mb-6">Upload History</h1>
+    <div id="history-list" class="flex flex-col"></div>
+    <div id="history-empty" class="text-center py-20 text-[var(--muted)]"><i class="fa-solid fa-inbox text-4xl mb-4 block opacity-30"></i>No uploads yet</div>
+  </div>
+
+</main>
+</div>
+<div id="toast-container"></div>
+
+<script>
+var TOPICS={
+psychology:{name:'Psychology',icon:'fa-brain',color:'#a78bfa',hooks:['Why your brain does THIS without you knowing...','Psychologists are stunned by this discovery...','3 psychology facts that feel illegal to know','Your brain has been lying to you about THIS...','This trick hacks your brain in seconds'],facts:['Your brain can\'t create faces — it only recycles ones you\'ve seen','You remember incomplete tasks better than finished ones','Rejection registers as physical pain in your brain','People who swear more tend to be more honest','Your brain randomly replays embarrassments to prepare you','You can only maintain about 150 real relationships','Your brain deletes useless info while you sleep','Power posing for 2 minutes actually changes your hormones','You\'re more creative when you\'re tired','Your brain uses 20% of your body\'s energy for just 2% of its mass'],ctas:['Follow for more mind-blowing facts','Save this before you forget','Part 2? Comment YES']},
+science:{name:'Science',icon:'fa-flask',color:'#38bdf8',hooks:['This science fact breaks the laws of common sense...','Scientists just found something impossible...','The most insane science fact you\'ve never heard','This will make you question reality...','What they don\'t teach you in science class'],facts:['A teaspoon of neutron star weighs 6 billion tons','There are more chess games than atoms in the universe','Hot water can freeze faster than cold water','Light takes 100,000 years to escape the Sun\'s core','A day on Venus is longer than its year','You\'re literally time-traveling right now','Fold paper 42 times and it reaches the Moon','Your DNA could stretch to Pluto and back 17 times','Sound travels 4x faster in water than air','Octopuses have 3 hearts and blue blood'],ctas:['Follow for daily science facts','Share this with a smart friend','Save this for later']},
+money:{name:'Money',icon:'fa-dollar-sign',color:'#4ade80',hooks:['Rich people do THIS every single morning...','The money rule nobody talks about...','Why 90% of people will never build wealth','This money trick changed everything for me','Stop doing THIS with your money right now'],facts:['The average millionaire has 7 income streams','78% of NFL players go bankrupt within 3 years','Compound interest is called the 8th wonder of the world','$200/month from age 25 = $500k+ by 65','66% of millennials have zero retirement savings','The average American wastes $1,497/month on non-essentials','A $5 daily coffee habit costs $1,825 per year','23% of adults have absolutely no emergency savings','Starting to invest at 25 vs 35 = hundreds of thousands lost','The richest 1% own more than the bottom 50% combined'],ctas:['Follow to build wealth','Save this — your future self will thank you','Share with someone who needs this']},
+health:{name:'Health',icon:'fa-heart-pulse',color:'#fb7185',hooks:['Your body does THIS every single day...','Doctors don\'t want you to know THIS...','One habit that changes your health forever','Your body is way more powerful than you think','Do THIS before bed and watch what happens'],facts:['Your stomach lining replaces itself every 3 to 4 days','Laughing for 15 minutes burns about 40 calories','Your body makes 25 million new cells every second','The average person walks 100,000 miles in a lifetime','Your heart beats about 100,000 times per day','Humans shed 600,000 skin particles every hour','Your nose can remember 50,000 different scents','You spend 6 months of your life waiting at red lights','Your eyes distinguish about 10 million colors','Your skeleton completely replaces itself every 10 years'],ctas:['Follow for daily health tips','Share this with someone you care about','Save this for your health routine']},
+history:{name:'History',icon:'fa-landmark',color:'#fbbf24',hooks:['History books got THIS completely wrong...','Nobody talks about THIS historical event...','This ancient secret was just uncovered...','The craziest true story in all of history','You won\'t believe what people used to do'],facts:['Cleopatra lived closer to the Moon landing than the Pyramids','Oxford University is older than the Aztec Empire','The last guillotine execution was in 1977 — same year as Star Wars','Nintendo was founded in 1889 as a playing card company','The shortest war in history lasted 38 minutes','Ancient Romans used crushed mouse brains as toothpaste','The Great Fire of London destroyed 13,200 houses but killed 6 people','The first alarm clock could only ring at 4 AM','Ancient Egyptians slept on stone pillows','The fax machine was invented before the telephone'],ctas:['Follow for daily history facts','Share this with a history nerd','Save this — it\'s wild']},
+space:{name:'Space',icon:'fa-rocket',color:'#818cf8',hooks:['What NASA found will shock you...','The scariest thing in space isn\'t what you think...','This planet shouldn\'t exist but it does...','Space is more terrifying than you know...','The universe is hiding THIS from us'],facts:['More stars exist than grains of sand on Earth','A year on Neptune is about 165 Earth years','Voyager 1 is over 14 billion miles from Earth','Moon footprints will last 100 million years','The largest star could fit 5 billion Suns inside','Space is completely silent — no air to carry sound','One million Earths could fit inside the Sun','The Milky Way will collide with Andromeda in 4 billion years','There\'s a planet made of diamonds called 55 Cancri e','The observable universe is 93 billion light-years across'],ctas:['Follow for daily space facts','Share this — it\'s mind-blowing','Save this for later']},
+nature:{name:'Nature',icon:'fa-leaf',color:'#34d399',hooks:['Animals are WAY smarter than you think...','Nature has a secret language...','This animal fact sounds fake but it\'s 100% true','The craziest thing happening in nature right now','Plants can actually do THIS...'],facts:['Trees communicate through underground fungal networks','A group of flamingos is called a "flamboyance"','Honey never spoils — 3000-year-old honey is still edible','Octopuses can taste with their tentacles','One rainforest can produce 75% of its own rainfall','Dolphins give each other unique names','Bananas are berries but strawberries aren\'t','Crows recognize human faces and hold grudges','A blue whale\'s heart is the size of a small car','Mushrooms are more closely related to animals than plants'],ctas:['Follow for daily nature facts','Share this with an animal lover','Save this — nature is amazing']},
+tech:{name:'Tech',icon:'fa-microchip',color:'#f472b6',hooks:['Your phone is doing THIS without permission...','Big Tech doesn\'t want you to know THIS...','This technology will change everything soon...','The internet has a dark side nobody mentions...','Your smartphone knows THIS about you...'],facts:['The first computer bug was an actual moth in a relay','90% of all data was created in just the last 2 years','Windows was originally called "Interface Manager"','The first website is still online at info.cern.ch','Your phone has more power than all of NASA in 1969','The QWERTY keyboard was designed to slow typists down','The first 1GB drive weighed 550 pounds and cost $40,000','About 6,000 new computer viruses are created every month','People spend 7 hours daily looking at screens','Wi-Fi doesn\'t stand for "Wireless Fidelity" — it\'s a made-up brand name'],ctas:['Follow for daily tech facts','Share this with a tech friend','Save this before it gets buried']}
+};
+
+var STYLES=[
+{id:'neon',name:'Dark Neon',bg:'#0a0a0a',accent:'#ff3b30',text:'#ffffff',desc:'Glowing red on black'},
+{id:'gradient',name:'Gradient Flow',bg:'#0f0a1a',accent:'#a855f7',text:'#ffffff',desc:'Purple flow'},
+{id:'minimal',name:'Clean Light',bg:'#f0f0f0',accent:'#111111',text:'#111111',desc:'White minimal'},
+{id:'alert',name:'Red Alert',bg:'#0a0a0a',accent:'#ef4444',text:'#ffffff',desc:'Breaking news'},
+{id:'cosmic',name:'Cosmic',bg:'#050a18',accent:'#60a5fa',text:'#e0f0ff',desc:'Deep space blue'}
+];
+
+var state={
+clientId:localStorage.getItem('yt_client_id')||'',
+accessToken:localStorage.getItem('yt_access_token')||'',
+currentView:'dashboard',selectedTopic:null,selectedStyle:'neon',
+script:[],videoBlob:null,isRendering:false,
+history:JSON.parse(localStorage.getItem('ash_history')||'[]')
+};
+
+function seededRandom(s){s=s%2147483647;if(s<=0)s+=2147483646;return function(){s=s*16807%2147483647;return(s-1)/2147483646}}
+function dailySeed(){var d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate()}
+function pickRandom(a,r,n){var s=[].concat(a).sort(function(){return r()-0.5});return s.slice(0,n)}
+function showToast(m,t){t=t||'info';var c=document.getElementById('toast-container');var ic={info:'fa-circle-info',success:'fa-circle-check',error:'fa-circle-xmark',warn:'fa-triangle-exclamation'};var cl={info:'var(--accent)',success:'var(--success)',error:'#ef4444',warn:'var(--warn)'};var e=document.createElement('div');e.className='toast';e.innerHTML='<i class="fa-solid '+ic[t]+'" style="color:'+cl[t]+'"></i>'+m;c.appendChild(e);setTimeout(function(){e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(function(){e.remove()},300)},3500)}
+function wrapText(c,t,m){var w=t.split(' ');var l=[];var ln='';for(var i=0;i<w.length;i++){var test=ln?ln+' '+w[i]:w[i];if(c.measureText(test).width>m&&ln){l.push(ln);ln=w[i]}else ln=test}if(ln)l.push(ln);return l}
+
+function generateDailyTopics(){
+var rng=seededRandom(dailySeed());
+var cats=Object.keys(TOPICS);
+var sel=pickRandom(cats,rng,3);
+var grid=document.getElementById('topics-grid');
+grid.innerHTML='';
+sel.forEach(function(ck){
+var cat=TOPICS[ck];
+var hook=cat.hooks[Math.floor(rng()*cat.hooks.length)];
+var facts=pickRandom(cat.facts,rng,5);
+var cta=cat.ctas[Math.floor(rng()*cat.ctas.length)];
+var card=document.createElement('div');
+card.className='topic-card';
+var factsHtml=facts.map(function(f){return '<span class="text-[11px] bg-white/5 px-2 py-1 rounded-md text-[var(--muted)] truncate max-w-full">'+f.slice(0,40)+'...</span>'}).join('');
+card.innerHTML='<div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:'+cat.color+'22;color:'+cat.color+'"><i class="fa-solid '+cat.icon+'"></i></div><span class="text-sm font-600" style="color:'+cat.color+'">'+cat.name+'</span></div><p class="text-[15px] font-600 leading-snug mb-4" style="min-height:48px">'+hook+'</p><div class="flex flex-wrap gap-1.5 mb-4">'+factsHtml+'</div><button class="btn-primary text-sm w-full justify-center topic-use-btn">Use This Topic</button>';
+var btn=card.querySelector('.topic-use-btn');
+btn.addEventListener('click',function(e){e.stopPropagation();selectTopic(ck,hook,facts,cta)});
+grid.appendChild(card);
+})}
+
+function selectTopic(catKey,hook,facts,cta){
+var cat=TOPICS[catKey];
+state.script=[{text:hook,duration:4,type:'hook'}];
+facts.forEach(function(f,i){state.script.push({text:f,duration:3.5,type:'fact',index:i+1,total:facts.length})});
+state.script.push({text:cta,duration:2.5,type:'cta'});
+state.selectedTopic={catKey:catKey,hook:hook,facts:facts,cta:cta};
+document.getElementById('video-title').value=hook.replace(/\.\.\./,'')+' #shorts #viral';
+document.getElementById('video-desc').value=facts.join('\n')+'\n\n'+cta+'\n\n#shorts #viral #facts #trending #fyp';
+document.getElementById('editor-topic-label').textContent=cat.name+' — '+hook.slice(0,50)+'...';
+renderScriptList();showView('editor');
+document.getElementById('btn-render').disabled=false;
+previewFrame(0)}
+
+function renderScriptList(){
+var list=document.getElementById('script-list');list.innerHTML='';
+var labels={hook:'HOOK',cta:'CTA'};
+var colors={hook:'var(--accent)',fact:'var(--muted)',cta:'var(--success)'};
+state.script.forEach(function(s){
+var lb=s.type==='fact'?'FACT '+s.index+'/'+s.total:labels[s.type];
+list.innerHTML+='<div class="scene-item"><span class="scene-num" style="color:'+colors[s.type]+'">'+lb+'</span><span class="text-[var(--fg)]">'+s.text+'</span><span class="ml-auto text-[var(--muted)] text-xs flex-shrink-0">'+s.duration+'s</span></div>'})}
+
+function renderStyleSelector(){
+var grid=document.getElementById('styles-grid');grid.innerHTML='';
+STYLES.forEach(function(s){
+var card=document.createElement('div');
+card.className='style-card'+(state.selectedStyle===s.id?' active':'');
+card.innerHTML='<div class="w-full h-8 rounded-md mb-2" style="background:'+s.bg+';border:1px solid '+s.accent+'33"></div><div class="text-xs font-600">'+s.name+'</div><div class="text-[10px] text-[var(--muted)]">'+s.desc+'</div>';
+card.addEventListener('click',function(){state.selectedStyle=s.id;renderStyleSelector();previewFrame(0)});
+grid.appendChild(card)})}
+
+var canvas=document.getElementById('render-canvas');
+var ctx=canvas.getContext('2d');
+var W=1080,H=1920,FPS=30;
+var particles=[];
+function generateParticles(n){particles=[];for(var i=0;i<n;i++)particles.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*3+1,vx:(Math.random()-0.5)*0.5,vy:(Math.random()-0.5)*0.5,a:Math.random()})}
+generateParticles(60);
+
+function getStyle(id){for(var i=0;i<STYLES.length;i++)if(STYLES[i].id===id)return STYLES[i];return STYLES[0]}
+
+function renderBackground(style,time){
+var s=getStyle(style);
+if(style==='neon'){
+ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,W,H);
+for(var i=0;i<3;i++){var cx=W/2+Math.sin(time*0.4+i*2.1)*300;var cy=H*0.4+Math.cos(time*0.3+i*1.7)*400;var grad=ctx.createRadialGradient(cx,cy,0,cx,cy,400);grad.addColorStop(0,'rgba(255,59,48,0.08)');grad.addColorStop(1,'rgba(255,59,48,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H)}
+particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.a=0.3+Math.sin(time*2+p.x)*0.3;if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='rgba(255,59,48,'+Math.max(0,p.a).toFixed(2)+')';ctx.fill()})}
+else if(style==='gradient'){
+var t=time*0.2;var x1=W*0.5+Math.sin(t)*W*0.3,y1=H*0.3+Math.cos(t*0.7)*H*0.2;var x2=W*0.5+Math.cos(t*0.5)*W*0.3,y2=H*0.7+Math.sin(t*0.3)*H*0.2;var grad=ctx.createLinearGradient(x1,y1,x2,y2);grad.addColorStop(0,'#0f0a1a');grad.addColorStop(0.5,'#1a0a2e');grad.addColorStop(1,'#0a1628');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+for(var i=0;i<4;i++){var ox=W/2+Math.sin(time*0.5+i*1.5)*350;var oy=H*0.5+Math.cos(time*0.4+i*2)*500;var g=ctx.createRadialGradient(ox,oy,0,ox,oy,300);g.addColorStop(0,'rgba(168,85,247,'+(0.06+i*0.02).toFixed(2)+')');g.addColorStop(1,'rgba(168,85,247,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}}
+else if(style==='minimal'){
+ctx.fillStyle='#f0f0f0';ctx.fillRect(0,0,W,H);ctx.fillStyle='#111111';ctx.fillRect(0,0,12,H);ctx.strokeStyle='rgba(0,0,0,0.04)';ctx.lineWidth=1;for(var y=0;y<H;y+=80){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}}
+else if(style==='alert'){
+ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,W,H);
+for(var y=0;y<H;y+=6){ctx.fillStyle='rgba(239,68,68,'+(0.01+Math.sin(y*0.1+time)*0.01).toFixed(3)+')';ctx.fillRect(0,y,W,2)}
+var flash=Math.sin(time*4)>0.7?0.15:0.05;ctx.fillStyle='rgba(239,68,68,'+flash.toFixed(2)+')';ctx.fillRect(0,0,W,8);ctx.fillRect(0,H-8,W,8);ctx.fillRect(0,0,8,H);ctx.fillRect(W-8,0,8,H)}
+else if(style==='cosmic'){
+ctx.fillStyle='#050a18';ctx.fillRect(0,0,W,H);
+particles.forEach(function(p,i){var tw=0.2+Math.sin(time*3+i)*0.3;ctx.beginPath();ctx.arc(p.x,p.y,p.r*0.8,0,Math.PI*2);ctx.fillStyle='rgba(180,200,255,'+Math.max(0,tw).toFixed(2)+')';ctx.fill()});
+var nx=W*0.6+Math.sin(time*0.15)*200,ny=H*0.4+Math.cos(time*0.1)*300;var ng=ctx.createRadialGradient(nx,ny,0,nx,ny,600);ng.addColorStop(0,'rgba(96,165,250,0.06)');ng.addColorStop(0.5,'rgba(139,92,246,0.03)');ng.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=ng;ctx.fillRect(0,0,W,H)}}
+
+function renderSceneText(style,text,progress,sceneType,sceneIndex,sceneTotal){
+var s=getStyle(style);
+var fontSize=sceneType==='hook'?86:sceneType==='cta'?72:78;
+var weight=sceneType==='hook'?'800':sceneType==='cta'?'600':'700';
+ctx.font=weight+' '+fontSize+'px Outfit, sans-serif';
+ctx.textAlign='center';ctx.textBaseline='middle';
+var maxW=W*0.8;
+var words=text.split(' ');var totalWords=words.length;
+var wordsToShow=Math.min(Math.floor(progress*totalWords*1.8)+1,totalWords);
+var visibleText=words.slice(0,wordsToShow).join(' ');
+var visibleLines=wrapText(ctx,visibleText,maxW);
+var lineHeight=fontSize*1.25;var blockH=visibleLines.length*lineHeight;
+var startY=H/2-blockH/2+lineHeight/2;
+
+if(style==='neon'){ctx.shadowColor=s.accent;ctx.shadowBlur=20;ctx.fillStyle='#ffffff'}
+else if(style==='gradient'){ctx.shadowColor='rgba(168,85,247,0.5)';ctx.shadowBlur=16;ctx.fillStyle='#ffffff'}
+else if(style==='minimal'){ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.fillStyle='#111111'}
+else if(style==='alert'){ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.fillStyle='#ffffff'}
+else if(style==='cosmic'){ctx.shadowColor='rgba(96,165,250,0.5)';ctx.shadowBlur=16;ctx.fillStyle='#e0f0ff'}
+
+visibleLines.forEach(function(line,i){var y=startY+i*lineHeight;var slideOffset=Math.max(0,(1-progress*3))*60;ctx.globalAlpha=Math.min(1,progress*3);ctx.fillText(line,W/2,y+slideOffset)});
+ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';
+
+if(sceneType==='fact'&&style!=='minimal'){ctx.font='600 36px Outfit, sans-serif';ctx.fillStyle=style==='minimal'?'rgba(0,0,0,0.2)':'rgba(255,255,255,0.15)';ctx.textAlign='right';ctx.fillText(sceneIndex+' / '+sceneTotal,W-60,H-80);ctx.textAlign='center'}
+if(style==='alert'&&sceneType==='fact'){ctx.font='800 32px Outfit, sans-serif';ctx.fillStyle='#ef4444';ctx.textAlign='left';ctx.fillText('FACT #'+sceneIndex,60,100);ctx.textAlign='center'}
+if(style==='minimal'){var lineY=startY+visibleLines.length*lineHeight+20;ctx.fillStyle='#111111';ctx.fillRect(W/2-60,lineY,120,4)}}
+
+function renderFrame(time){
+ctx.clearRect(0,0,W,H);
+renderBackground(state.selectedStyle,time);
+var acc=0,sceneIdx=0,sceneTime=0;
+for(var i=0;i<state.script.length;i++){if(time<acc+state.script[i].duration){sceneIdx=i;sceneTime=time-acc;break}acc+=state.script[i].duration;if(i===state.script.length-1){sceneIdx=i;sceneTime=state.script[i].duration}}
+var scene=state.script[sceneIdx];var sceneProgress=sceneTime/scene.duration;
+var fadeIn=Math.min(sceneTime/0.3,1);var fadeOut=Math.min((scene.duration-sceneTime)/0.3,1);
+ctx.globalAlpha=Math.min(fadeIn,fadeOut);
+renderSceneText(state.selectedStyle,scene.text,sceneProgress,scene.type,scene.index,scene.total);
+ctx.globalAlpha=1}
+
+function previewFrame(time){if(!state.script.length)return;generateParticles(60);renderFrame(time)}
+function getTotalDuration(){var s=0;state.script.forEach(function(sc){s+=sc.duration});return s}
+
+async function startRender(){
+if(state.isRendering||!state.script.length)return;
+state.isRendering=true;state.videoBlob=null;
+var btnR=document.getElementById('btn-render');var btnD=document.getElementById('btn-download');var btnU=document.getElementById('btn-upload');
+var pw=document.getElementById('render-progress-wrap');
+btnR.disabled=true;btnD.classList.add('hidden');btnU.classList.add('hidden');pw.classList.remove('hidden');
+document.getElementById('render-status').textContent='Rendering...';
+generateParticles(60);
+var totalDur=getTotalDuration();var totalFrames=Math.ceil(totalDur*FPS);
+var mimeType='video/webm;codecs=vp9';
+if(!MediaRecorder.isTypeSupported(mimeType)){mimeType='video/webm;codecs=vp8';if(!MediaRecorder.isTypeSupported(mimeType))mimeType='video/webm'}
+var stream=canvas.captureStream(FPS);
+var recorder=new MediaRecorder(stream,{mimeType:mimeType,videoBitsPerSecond:8000000});
+var chunks=[];
+recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data)};
+var blob=await new Promise(function(resolve){
+recorder.onstop=function(){resolve(new Blob(chunks,{type:'video/webm'}))};
+recorder.start(100);
+var frame=0;
+function loop(){if(frame>=totalFrames){recorder.stop();return}renderFrame(frame/FPS);frame++;var pct=Math.round(frame/totalFrames*100);document.getElementById('render-pct').textContent=pct+'%';document.getElementById('render-fill').style.width=pct+'%';requestAnimationFrame(loop)}
+requestAnimationFrame(loop)});
+state.videoBlob=blob;state.isRendering=false;
+document.getElementById('render-status').textContent='Done';
+btnR.disabled=false;btnD.classList.remove('hidden');
+if(state.accessToken)btnU.classList.remove('hidden');
+showToast('Video rendered — '+(blob.size/1024/1024).toFixed(1)+' MB','success')}
+
+function downloadVideo(){if(!state.videoBlob)return;var a=document.createElement('a');a.href=URL.createObjectURL(state.videoBlob);a.download='short_'+Date.now()+'.webm';a.click();URL.revokeObjectURL(a.href);showToast('Video downloaded','success')}
+
+function updateConnectionStatus(){
+var el=document.getElementById('conn-status');
+if(state.accessToken){el.innerHTML='<div class="glow-dot flex-shrink-0"></div><span class="sidebar-label">YouTube connected</span>';el.style.color='var(--success)'}
+else{el.innerHTML='<div class="w-2 h-2 rounded-full bg-[var(--muted)] flex-shrink-0"></div><span class="sidebar-label">Not connected</span>';el.style.color='var(--muted)'}}
+
+function saveClientId(){
+var id=document.getElementById('client-id-input').value.trim();
+if(!id){showToast('Please enter a Client ID','error');return}
+state.clientId=id;localStorage.setItem('yt_client_id',id);
+document.getElementById('connect-section').classList.remove('hidden');
+showToast('Client ID saved','success')}
+
+function connectYouTube(){
+if(!state.clientId){showToast('Save Client ID first','error');return}
+if(typeof google==='undefined'||!google.accounts){showToast('Google Identity Services not loaded. Use a web server.','error');return}
+try{var tokenClient=google.accounts.oauth2.initTokenClient({
+client_id:state.clientId,
+scope:'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
+callback:function(resp){if(resp.error){showToast('Auth error: '+resp.error,'error');return}state.accessToken=resp.access_token;localStorage.setItem('yt_access_token',resp.access_token);updateConnectionStatus();showToast('YouTube connected successfully','success');if(state.videoBlob)document.getElementById('btn-upload').classList.remove('hidden')}
+});tokenClient.requestAccessToken({prompt:'consent'})}
+catch(e){showToast('Failed to initialize: '+e.message,'error')}}
+
+async function uploadToYouTube(){
+if(!state.videoBlob||!state.accessToken)return;
+var btn=document.getElementById('btn-upload');btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>Uploading...';
+document.getElementById('render-status').textContent='Uploading to YouTube...';
+var pw=document.getElementById('render-progress-wrap');pw.classList.remove('hidden');
+document.getElementById('render-pct').textContent='...';document.getElementById('render-fill').style.width='0%';
+document.getElementById('render-fill').style.background='var(--success)';
+var title=document.getElementById('video-title').value||'Viral Short #shorts';
+var desc=document.getElementById('video-desc').value||'';
+var metadata={snippet:{title:title,description:desc,categoryId:'22',defaultLanguage:'en'},status:{privacyStatus:'public',selfDeclaredMadeForKids:false,embeddable:true}};
+try{
+var res=await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{'Authorization':'Bearer '+state.accessToken,'Content-Type':'application/json'},body:JSON.stringify(metadata)});
+if(!res.ok){var err=await res.json().catch(function(){});throw new Error((err&&err.error&&err.error.message)||'HTTP '+res.status)}
+var uploadUrl=res.headers.get('Location');if(!uploadUrl)throw new Error('No upload URL received');
+document.getElementById('render-status').textContent='Uploading video data...';
+var xhr=new XMLHttpRequest();
+await new Promise(function(resolve,reject){
+xhr.upload.onprogress=function(e){if(e.lengthComputable){var pct=Math.round(e.loaded/e.total*100);document.getElementById('render-pct').textContent=pct+'%';document.getElementById('render-fill').style.width=pct+'%'}};
+xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){resolve(JSON.parse(xhr.responseText))}else{try{reject(new Error(JSON.parse(xhr.responseText).error.message))}catch(e){reject(new Error('Upload failed '+xhr.status))}}};
+xhr.onerror=function(){reject(new Error('Network error'))};
+xhr.open('PUT',uploadUrl);xhr.setRequestHeader('Content-Type','video/webm');xhr.send(state.videoBlob)});
+state.history.unshift({title:title,date:new Date().toISOString(),status:'uploaded'});
+localStorage.setItem('ash_history',JSON.stringify(state.history));
+updateStats();renderHistory();
+document.getElementById('render-status').textContent='Uploaded!';document.getElementById('render-pct').textContent='100%';document.getElementById('render-fill').style.width='100%';
+showToast('Video uploaded to YouTube!','success')}
+catch(e){showToast('Upload failed: '+e.message,'error');document.getElementById('render-status').textContent='Upload failed';
+if(e.message.indexOf('401')>=0||e.message.indexOf('token')>=0){state.accessToken='';localStorage.removeItem('yt_access_token');updateConnectionStatus()}}
+finally{btn.disabled=false;btn.innerHTML='<i class="fa-brands fa-youtube"></i>Upload'}}
+
+function renderHistory(){
+var list=document.getElementById('history-list');var empty=document.getElementById('history-empty');
+if(!state.history.length){list.innerHTML='';empty.classList.remove('hidden');return}
+empty.classList.add('hidden');
+var html='<div class="history-row text-xs text-[var(--muted)] uppercase tracking-wider font-600"><span>#</span><span>Title</span><span>Date</span><span>Status</span></div>';
+state.history.forEach(function(h,i){html+='<div class="history-row"><span class="text-[var(--muted)]">'+(i+1)+'</span><span class="truncate">'+h.title+'</span><span class="text-[var(--muted)] text-sm">'+new Date(h.date).toLocaleDateString()+'</span><span class="text-[var(--success)] text-sm flex items-center gap-2"><i class="fa-solid fa-circle-check"></i>'+h.status+'</span></div>'});
+list.innerHTML=html}
+
+function updateStats(){
+document.getElementById('stat-videos').textContent=state.history.length;
+var streak=0;var today=new Date();today.setHours(0,0,0,0);
+for(var d=0;d<365;d++){var check=new Date(today);check.setDate(check.getDate()-d);var ds=check.toISOString().split('T')[0];if(state.history.some(function(h){return h.date.indexOf(ds)===0}))streak++;else break}
+document.getElementById('stat-streak').textContent=streak}
+
+function showView(name){
+state.currentView=name;
+['setup','dashboard','editor','history'].forEach(function(v){document.getElementById('view-'+v).classList.toggle('hidden',v!==name)});
+document.querySelectorAll('.nav-item[data-view]').forEach(function(n){n.classList.toggle('active',n.dataset.view===name)});
+if(name==='history')renderHistory();
+if(name==='dashboard'){updateStats();generateDailyTopics()}
+if(name==='editor')renderStyleSelector()}
+
+function init(){
+document.getElementById('today-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+document.getElementById('origin-hint').textContent=location.origin||'http://localhost:8080';
+if(state.clientId){document.getElementById('client-id-input').value=state.clientId;document.getElementById('connect-section').classList.remove('hidden')}
+document.querySelectorAll('.nav-item[data-view]').forEach(function(n){n.addEventListener('click',function(){showView(n.dataset.view)})});
+document.getElementById('btn-save-client').addEventListener('click',saveClientId);
+document.getElementById('btn-connect-yt').addEventListener('click',connectYouTube);
+generateDailyTopics();updateStats();renderHistory();updateConnectionStatus();renderStyleSelector();
+ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,W,H);ctx.font='500 42px Outfit, sans-serif';ctx.fillStyle='#333';ctx.textAlign='center';ctx.fillText('Select a topic to preview',W/2,H/2)}
+
+document.fonts.ready.then(init);
+</script>
+</body>
+</html>
